@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <title></title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        #app {
+            width: 600px;
+            margin: 10px auto;
+        }
+        
+        .tb {
+            border-collapse: collapse;
+            width: 100%;
+        }
+        
+        .tb th {
+            background-color: #0094ff;
+            color: white;
+        }
+        
+        .tb td,
+        .tb th {
+            padding: 5px;
+            border: 1px solid black;
+            text-align: center;
+        }
+        
+        .add {
+            padding: 5px;
+            border: 1px solid black;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="app">
+        <div class="add">
+            品牌名称:
+            <input type="text" v-model="name" v-focus>
+            <input type="button" value="添加" @click="addItem()">
+        </div>
+
+        <div class="add">
+            品牌名称:
+            <input type="text" placeholder="请输入搜索条件" v-model='searcVal'>
+        </div>
+
+        <div>
+            <table class="tb">
+                <tr>
+                    <th>编号</th>
+                    <th>品牌名称</th>
+                    <th>创立时间</th>
+                    <th>操作</th>
+                </tr>
+                <tr v-for="(v,i) in list" :key="i">
+                    <td>{{v.id}}</td>
+                    <td>{{v.name}}</td>
+                    <td>{{v.date | fmtDate}}</td>
+                    <td>
+                        <a href="#" @click="deteItem(v.id)">删除</a>
+                    </td>
+                </tr>
+                <tr v-if="list.length===0">
+                    <td colspan="4">没有品牌数据</td>
+                </tr>
+            </table>
+        </div>
+    </div>
+    <script src="./vue.js"></script>
+    <script src="./moment.js"></script>
+    <script src="./axios.min.js"></script>
+
+
+    <script>
+        // 全局自定义指令
+
+        Vue.directive("focus", {
+            inserted: function (el) {
+                // el的值就是将来指令的调用者 某个标签元素
+                // console.log(el);
+                el.focus();
+            }
+        });
+        // 全局过滤器
+        // 1. 定义
+        // 2. 功能
+        // 3. 使用
+        Vue.filter("fmtDate", function (v) {
+            // v -> "好长的字符串日期"->速度最快->moment
+
+            return moment(v).format('YYYY-MM-DD hh:mm:ss');
+
+
+
+        });
+
+
+        var vm = new Vue({
+            el: "#app",
+            data: {
+                searcVal: '',
+                name: "",
+                list: []
+            },
+            watch: {
+                searcVal : function(newV,oldV){
+                    axios.get("http://localhost:3000/brands?name_like=" + newV).then((res) => {
+                        const {
+                            data
+                        } = res;
+                        this.list = data
+                    })
+                }   
+            },
+            // computed: {
+            //     newlist() {
+
+            //         return this.list.filter((v) => {
+            //             return v.name.startsWith(this.searcVal)
+            //         })
+            //     }
+            // },
+            mounted() {
+                this.getData()
+            },
+            methods: {
+                // 删除商品
+                deteItem(ID) {
+                    // 提示框
+                    if (confirm("Sure?")) {
+                        axios.delete('http://localhost:3000/brands/'+ID).then((res) => {
+                            // console.log(res)
+                            const {
+                                status
+                            } = res;
+                            if (status === 200) {
+                                this.getData()
+                            }
+
+                        }).catch((err) => {
+                            console.log(err)
+                        });
+
+
+                    }
+                },
+
+
+                getData() {
+                    axios.get('http://localhost:3000/brands').then((res) => {
+                        // console.log(res)
+                        const {
+                            status,
+                            data
+                        } = res;
+                        if (status === 200) {
+                            this.list = res.data
+                        }
+
+                    }).catch((err) => {
+                        console.log(err)
+                    });
+                },
+
+
+                // 添加商品
+                addItem() {
+                    axios.post("http://localhost:3000/brands",{
+                        name :this.name,
+                        date:new Date()
+                    }).then((res) =>{
+                        const {
+                            status
+                        } =res;
+                        if(status === 201){
+                            this.getData();
+                            this.name = ''
+                        }   
+                    })
+                }
+
+            }
+        })
+    </script>
+</body>
+
+</html>
+
